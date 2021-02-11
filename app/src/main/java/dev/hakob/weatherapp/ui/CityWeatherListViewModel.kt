@@ -2,11 +2,12 @@ package dev.hakob.weatherapp.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.hakob.weatherapp.Const.PAGE_SIZE
 import dev.hakob.weatherapp.core.Resource
 import dev.hakob.weatherapp.core.SingleEvent
 import dev.hakob.weatherapp.core.Status
 import dev.hakob.weatherapp.data.WeatherRepository
-import dev.hakob.weatherapp.data.entity.UserWeatherEntity
+import dev.hakob.weatherapp.data.entity.CityWeather
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -25,7 +26,7 @@ class CityWeatherListViewModel @Inject constructor(
 
     private var noMoreItems = false
 
-    val cityList: LiveData<Resource<List<UserWeatherEntity>>> =
+    val cityList: LiveData<Resource<List<CityWeather>>> =
         page.flatMapLatest {
             Timber.d("$it")
             repository.getWeatherList(it)
@@ -35,7 +36,7 @@ class CityWeatherListViewModel @Inject constructor(
                 noMoreItems = true
                 return@onEach
             }
-            noMoreItems = (page.value * 10) > size
+            noMoreItems = (page.value * PAGE_SIZE) > size
         }.asLiveData()
 
     fun onEndReached() {
@@ -49,7 +50,7 @@ class CityWeatherListViewModel @Inject constructor(
         }
     }
 
-    fun removeCity(city: UserWeatherEntity) {
+    fun removeCity(city: CityWeather) {
         repository.removeCity(city)
     }
 
@@ -68,7 +69,7 @@ class CityWeatherListViewModel @Inject constructor(
         }
     }
 
-    fun onItemMoved(item: UserWeatherEntity?, fromPos: Int, toPos: Int) {
+    fun onItemMoved(item: CityWeather?, fromPos: Int, toPos: Int) {
         if (item == null) {
             return
         }

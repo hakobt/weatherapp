@@ -1,26 +1,26 @@
 package dev.hakob.weatherapp.data
 
 import androidx.room.*
-import dev.hakob.weatherapp.data.entity.UserWeatherEntity
+import dev.hakob.weatherapp.data.entity.CityWeather
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WeatherDao {
 
     @Query("SELECT * FROM user_weather WHERE cityId = :cityId LIMIT 1")
-    fun getWeatherForCityWithId(cityId: Int): Flow<UserWeatherEntity>
+    fun getWeatherForCityWithId(cityId: Int): Flow<CityWeather>
 
     @Query("SELECT * FROM user_weather ORDER BY sortOrder ASC LIMIT :limit ")
-    fun getAllCitiesWithWeather(limit: Int): Flow<List<UserWeatherEntity>>
+    fun getAllCitiesWithWeather(limit: Int): Flow<List<CityWeather>>
 
     @Query("SELECT cityId FROM user_weather")
     suspend fun getAllCityIds(): List<Int>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertWeather(userWeatherEntity: UserWeatherEntity)
+    fun insertWeather(cityWeather: CityWeather)
 
-    @Update
-    fun insertWeathers(list: List<UserWeatherEntity>)
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    fun insertWeathers(list: List<CityWeather>)
 
     @Query("DELETE FROM user_weather WHERE cityId = :cityId")
     fun deleteCityWithId(cityId: Int)
@@ -35,18 +35,18 @@ interface WeatherDao {
     suspend fun updateSortWhenMovedDownInternal(fromPos: Int, toPos: Int)
 
     @Query("UPDATE user_weather SET sortOrder=:newPos WHERE cityId =:cityId")
-    suspend fun updateCurrent(cityId: Int, newPos: Int)
+    suspend fun updateSortOrderForCurrent(cityId: Int, newPos: Int)
 
     @Transaction
     suspend fun updateSortWhenMovedDown(cityId: Int, fromPos: Int, toPos: Int) {
         updateSortWhenMovedDownInternal(fromPos, toPos)
-        updateCurrent(cityId, toPos)
+        updateSortOrderForCurrent(cityId, toPos)
     }
 
     @Transaction
     suspend fun updateSortWhenMovedUp(cityId: Int, fromPos: Int, toPos: Int) {
         updateSortWhenMovedUpInternal(fromPos, toPos)
-        updateCurrent(cityId, toPos)
+        updateSortOrderForCurrent(cityId, toPos)
     }
 
     @Transaction

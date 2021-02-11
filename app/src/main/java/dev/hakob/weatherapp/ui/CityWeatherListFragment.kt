@@ -5,21 +5,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.*
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import dev.hakob.weatherapp.R
 import dev.hakob.weatherapp.core.Resource
 import dev.hakob.weatherapp.core.addPageListener
-import dev.hakob.weatherapp.data.entity.UserWeatherEntity
+import dev.hakob.weatherapp.data.entity.CityWeather
 import dev.hakob.weatherapp.databinding.LayoutWeatherListBinding
 import dev.hakob.weatherapp.network.ConnectivityManager
-import kotlinx.coroutines.delay
 import timber.log.Timber
 
 @AndroidEntryPoint
@@ -27,8 +25,17 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
 
     private val viewModel by viewModels<CityWeatherListViewModel>()
 
-    private lateinit var adapter: WeatherListAdapter
+    private lateinit var adapter: CityWeatherListAdapter
     private lateinit var addCityDialog: AlertDialog
+    private lateinit var binding: LayoutWeatherListBinding
+
+    private val noInternetSnackbar by lazy {
+        Snackbar.make(
+            binding.root,
+            "Enable internet and click the plus button to add a location for weather",
+            Snackbar.LENGTH_INDEFINITE
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -70,7 +77,7 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val binding = LayoutWeatherListBinding.bind(view)
+        binding = LayoutWeatherListBinding.bind(view)
 
         binding.addCityButton.setOnClickListener {
             addCityDialog.show()
@@ -82,35 +89,29 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.END or ItemTouchHelper.START
         ) {
-
             var dragFromPosition = -1
             var dragToPosition = -1
-
-            var item: UserWeatherEntity? = null
+            var item: CityWeather? = null
 
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
-
                 if (dragFromPosition == -1) {
                     dragFromPosition = viewHolder.adapterPosition
                     item = adapter.currentList[dragFromPosition]
                 }
                 dragToPosition = target.adapterPosition
-
                 adapter.notifyItemMoved(viewHolder.adapterPosition, target.adapterPosition)
                 return true
             }
 
             private fun definitelyMoved(
-                item: UserWeatherEntity,
+                item: CityWeather,
                 fromPosition: Int,
                 toPosition: Int
             ) {
-                Timber.d("Definitely moved yo")
-                Timber.d("${item.cityName}")
                 viewModel.onItemMoved(item, fromPosition, toPosition)
             }
 
@@ -118,9 +119,6 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
                 super.onSelectedChanged(viewHolder, actionState)
 
                 when (actionState) {
-//                    ItemTouchHelper.ACTION_STATE_DRAG -> {
-//                        viewHolder?.also { dragFromPosition = it.adapterPosition }
-//                    }
                     ItemTouchHelper.ACTION_STATE_IDLE -> {
                         if (dragFromPosition != -1 && dragToPosition != -1 && dragFromPosition != dragToPosition) {
                             // Item successfully dragged
@@ -144,11 +142,11 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
                 }
             }
         })
-        adapter = WeatherListAdapter(
+        adapter = CityWeatherListAdapter(
             clickHandler = { },
             longClickHandler = { position ->
                 val viewHolder = binding.listView.findViewHolderForAdapterPosition(position)
-                    ?: return@WeatherListAdapter
+                    ?: return@CityWeatherListAdapter
                 itemTouchHelper.startDrag(viewHolder)
             }
         )
@@ -170,7 +168,7 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
         viewModel.cityList.observe(viewLifecycleOwner, ::bindToView)
     }
 
-    private fun bindToView(resource: Resource<List<UserWeatherEntity>>) {
+    private fun bindToView(resource: Resource<List<CityWeather>>) {
         when (resource) {
             is Resource.Error -> {
                 // can show error to user
@@ -179,20 +177,23 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
                 // show loading to user
             }
             is Resource.Success -> {
-                Timber.d("${resource.data?.size}")
-                Timber.d("${resource.networkState}")
                 if (resource.data.isNullOrEmpty()
                     && resource.networkState == ConnectivityManager.NetworkState.DISCONNECTED
                 ) {
-                    showEnableInternetDialog()
+                    showHint()
                     return
                 }
+                hideHint()
                 adapter.submitList(resource.data)
             }
         }
     }
 
-    private fun showEnableInternetDialog() {
-        Toast.makeText(requireContext(), "No internet", Toast.LENGTH_SHORT).show()
+    private fun hideHint() {
+        noInternetSnackbar.dismiss()
+    }
+
+    private fun showHint() {
+        noInternetSnackbar.show()
     }
 }

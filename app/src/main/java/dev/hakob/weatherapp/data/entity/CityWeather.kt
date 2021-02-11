@@ -9,7 +9,7 @@ import dev.hakob.weatherapp.data.response.Temperature
 @Entity(
     tableName = "user_weather"
 )
-data class UserWeatherEntity(
+data class CityWeather(
     @PrimaryKey
     val cityId: Int,
     val cityName: String,
@@ -17,8 +17,8 @@ data class UserWeatherEntity(
     val sortOrder: Int = 0
 ) {
     companion object {
-        fun createFromResponse(dto: CurrentWeatherResponse): UserWeatherEntity {
-            return UserWeatherEntity(
+        fun createFromResponse(dto: CurrentWeatherResponse): CityWeather {
+            return CityWeather(
                 dto.id,
                 dto.name,
                 dto.main!!

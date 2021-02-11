@@ -19,7 +19,6 @@ interface WeatherApi {
         @Query("q") cityName: String
     ): Response<CurrentWeatherResponse>
 
-    // example: http://api.openweathermap.org/data/2.5/group?id=524901,703448,2643743&units=metric
     @GET("group")
     suspend fun getWeatherForCityList(
             @Query("id") ids: String

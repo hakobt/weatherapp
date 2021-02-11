@@ -1,9 +1,10 @@
 package dev.hakob.weatherapp.data
 
+import dev.hakob.weatherapp.Const.PAGE_SIZE
 import dev.hakob.weatherapp.api.WeatherApi
 import dev.hakob.weatherapp.core.Resource
 import dev.hakob.weatherapp.core.Status
-import dev.hakob.weatherapp.data.entity.UserWeatherEntity
+import dev.hakob.weatherapp.data.entity.CityWeather
 import dev.hakob.weatherapp.di.AppScope
 import dev.hakob.weatherapp.network.ConnectivityManager
 import kotlinx.coroutines.CoroutineScope
@@ -23,10 +24,9 @@ class WeatherRepository @Inject constructor(
     private val api: WeatherApi
 ) {
 
-    private val pageSize = 10
-
     init {
         // refresh weathers for stored cities
+        refreshCityWeathers()
     }
 
     private fun refreshCityWeathers() {
@@ -37,7 +37,7 @@ class WeatherRepository @Inject constructor(
                 val response = api.getWeatherForCityList(queryParam)
                 if (response.isSuccessful) {
                     val bulk = response.body()!!
-                    val entities = bulk.list.map { UserWeatherEntity.createFromResponse(it) }
+                    val entities = bulk.list.map { CityWeather.createFromResponse(it) }
                     val updatedEntitiesWithSortOrder = entities.map {
                         val sortOrder = weatherDao.getSortOrderForCityId(it.cityId)!!
                         it.copy(sortOrder = sortOrder)
@@ -50,14 +50,14 @@ class WeatherRepository @Inject constructor(
         }
     }
 
-    fun getWeatherList(page: Int): Flow<Resource<List<UserWeatherEntity>>> {
+    fun getWeatherList(page: Int): Flow<Resource<List<CityWeather>>> {
         // simple pagination
-        val limit = page * pageSize
+        val limit = page * PAGE_SIZE
         // combine with network status
         return combine(
             weatherDao.getAllCitiesWithWeather(limit),
             connectivityManager.networkState
-        ) { data: List<UserWeatherEntity>, networkState: ConnectivityManager.NetworkState ->
+        ) { data: List<CityWeather>, networkState: ConnectivityManager.NetworkState ->
             Resource.Success(data, networkState)
         }
     }
@@ -73,7 +73,7 @@ class WeatherRepository @Inject constructor(
             val sortOrder = weatherDao.getSortOrderForCityId(response.body()!!.id)
                 ?: ((weatherDao.maxSortOrder() ?: -1) + 1)
 
-            val entity = UserWeatherEntity.createFromResponse(
+            val entity = CityWeather.createFromResponse(
                 response.body() ?: return@withContext Status.Fail
             )
             val sortedEntity = entity.copy(sortOrder = sortOrder)
@@ -84,14 +84,14 @@ class WeatherRepository @Inject constructor(
         }
     }
 
-    fun removeCity(city: UserWeatherEntity) {
+    fun removeCity(city: CityWeather) {
         coroutineScope.launch(Dispatchers.IO) {
-            // remove city and shift the sort order
+            // remove city and reorder
             weatherDao.deleteCityWithIdAndReorder(city.cityId, city.sortOrder)
         }
     }
 
-    fun updateCitySortOrder(item: UserWeatherEntity, fromPos: Int, toPos: Int) {
+    fun updateCitySortOrder(item: CityWeather, fromPos: Int, toPos: Int) {
         if (fromPos == toPos) {
             throw IllegalArgumentException("Item $item hasn't moved")
         }
