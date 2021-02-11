@@ -77,6 +77,6 @@ class CityWeatherListViewModel @Inject constructor(
     }
 
     sealed class Event {
-        class AddCity(success: Boolean, name: String) : Event()
+        class AddCity(val success: Boolean, val name: String) : Event()
     }
 }

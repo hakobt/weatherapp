@@ -13,7 +13,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import dev.hakob.weatherapp.R
+import dev.hakob.weatherapp.core.EventObserver
 import dev.hakob.weatherapp.core.Resource
+import dev.hakob.weatherapp.core.SingleEvent
 import dev.hakob.weatherapp.core.addPageListener
 import dev.hakob.weatherapp.data.entity.CityWeather
 import dev.hakob.weatherapp.databinding.LayoutWeatherListBinding
@@ -166,6 +168,17 @@ class CityWeatherListFragment : Fragment(R.layout.layout_weather_list) {
         }
 
         viewModel.cityList.observe(viewLifecycleOwner, ::bindToView)
+        viewModel.events.observe(viewLifecycleOwner, EventObserver(::showEvent))
+    }
+
+    private fun showEvent(event: CityWeatherListViewModel.Event) {
+        when(event) {
+            is CityWeatherListViewModel.Event.AddCity -> {
+                if (!event.success) {
+                    Snackbar.make(binding.root, "Adding ${event.name} failed", Snackbar.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun bindToView(resource: Resource<List<CityWeather>>) {
